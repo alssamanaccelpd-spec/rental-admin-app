@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Аренда — админка</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg: var(--tg-theme-bg-color, #0f1115);
+    --card: var(--tg-theme-secondary-bg-color, #1a1d24);
+    --text: var(--tg-theme-text-color, #f2f3f5);
+    --muted: var(--tg-theme-hint-color, #8b909a);
+    --accent: var(--tg-theme-button-color, #3d8bfd);
+    --accent-text: var(--tg-theme-button-text-color, #ffffff);
+    --line: rgba(127, 127, 127, 0.18);
+    --ok: #2fb36b;
+    --bad: #e5484d;
+    --warn: #e8a33a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 12px 16px 32px; background: var(--bg); color: var(--text);
+    font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  h1 { font-size: 20px; margin: 4px 0 12px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+  .tab {
+    flex: 1; padding: 9px 0; border: 0; border-radius: 10px; background: var(--card);
+    color: var(--text); font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  .tab.active { background: var(--accent); color: var(--accent-text); }
+  .card { background: var(--card); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .big { font-size: 20px; font-weight: 700; white-space: nowrap; }
+  .title { font-weight: 600; }
+  .badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .badge { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--line); white-space: nowrap; }
+  .badge.ok { background: rgba(47, 179, 107, 0.18); color: var(--ok); }
+  .badge.bad { background: rgba(229, 72, 77, 0.18); color: var(--bad); }
+  .badge.warn { background: rgba(232, 163, 58, 0.18); color: var(--warn); }
+  .clickable { cursor: pointer; }
+  .sum-ok { color: var(--ok); }
+  .sum-bad { color: var(--bad); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 500; }
+  td.n, th.n { text-align: right; white-space: nowrap; }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 14px; }
+  .kv div:nth-child(odd) { color: var(--muted); }
+  .error { color: var(--bad); }
+  .items { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+  .item { padding: 6px 0; }
+  .center { text-align: center; padding: 40px 0; }
+  a { color: var(--accent); }
+  .back { background: none; border: 0; color: var(--accent); font-size: 15px; padding: 0 0 10px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="app"><div class="center muted">Загрузка…</div></div>
+<script>
+// Адрес API (Google Apps Script, развёрнутый как веб-приложение). Данных и
+// секретов на этой странице нет: всё приходит от API только после проверки
+// подписи Telegram и только админам.
+const API_URL = 'https://script.google.com/macros/s/AKfycbxYYiThB3LniUwDx0MWfIX8rMLps7tlu_Gp3PaYjBQQywrzc0_5SpoN2gEhXalUFr75-w/exec';
+
+const tg = window.Telegram && window.Telegram.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+
+const MONTHS = ['январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь'];
+const monthName = m => { const [y, mm] = m.split('-'); const n = MONTHS[+mm - 1]; return n[0].toUpperCase() + n.slice(1) + ' ' + y; };
+const money = v => (Math.round((v || 0) * 100) / 100).toLocaleString('ru-RU', {maximumFractionDigits: 2}) + ' ₽';
+const fmtDate = d => d ? d.split('-').reverse().join('.') : '';
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+let DATA = null;
+let view = {tab: 'apts', apt: null, openMonth: null};
+
+function statusBadge(inv) {
+  if (!inv) return '<span class="badge">🚫 счетов нет</span>';
+  const label = monthName(inv.month).toLowerCase();
+  if (inv.status === 'Оплачено') return `<span class="badge ok">✅ ${label} оплачен</span>`;
+  if (inv.status === 'На согласовании') return `<span class="badge warn">⏳ ${label} на согласовании</span>`;
+  return `<span class="badge bad">❌ ${label} не оплачен</span>`;
+}
+function botBadges(a) {
+  const tgB = a.inTg ? '<span class="badge ok">TG ✓</span>' : '<span class="badge">TG —</span>';
+  const mxB = a.inMax ? '<span class="badge ok">MAX ✓</span>' : '<span class="badge">MAX —</span>';
+  const none = (!a.inTg && !a.inMax) ? '<span class="badge bad">не в боте</span>' : '';
+  return tgB + mxB + none;
+}
+function kuBadge(a) {
+  if (!a.manualKu) return '<span class="badge">КУ 🚫 не нужна</span>';
+  return a.kuMonth === null ? '<span class="badge bad">КУ ❌ не прислана</span>' : `<span class="badge ok">КУ ✅ ${money(a.kuMonth)}</span>`;
+}
+function contractBadge(a) {
+  return (a.contractDate && a.contractUrl) ? '' : '<span class="badge bad">⚠️ нет данных договора</span>';
+}
+
+function renderApts() {
+  return DATA.apartments.map(a => `
+    <div class="card clickable" onclick="openApt('${esc(a.id)}')">
+      <div class="row">
+        <div>
+          <div class="title">${esc(a.address)}${a.unit ? ', ' + esc(a.unit) : ''}</div>
+          <div class="muted">${esc(a.tenant) || 'арендатор не указан'}</div>
+        </div>
+        <div class="big ${a.dueNow > 0 ? 'sum-bad' : ''}">${a.dueNow > 0 ? money(a.dueNow) : ''}</div>
+      </div>
+      <div class="badges">${statusBadge(a.lastInvoice)}${kuBadge(a)}${botBadges(a)}${contractBadge(a)}</div>
+    </div>`).join('');
+}
+
+function renderApt(a) {
+  const contract = (a.contractDate && a.contractUrl)
+    ? `${fmtDate(a.contractDate)} · <a href="${esc(a.contractUrl)}" onclick="openLink(event, this.href)">открыть</a>`
+    : `<span class="error">⚠️ ${!a.contractDate && !a.contractUrl ? 'нет даты и ссылки' : (!a.contractDate ? 'нет даты' : 'нет ссылки')}</span>`;
+  const rows = a.history.map(r => `
+    <tr><td>${fmtDate(r.date)}</td><td class="n">${money(r.rent)}</td><td class="n">${money(r.ku + r.extra)}</td>
+    <td class="n">${money(r.total)}</td><td>${r.status === 'Оплачено' ? '✅' : (r.status === 'На согласовании' ? '⏳' : '❌')}</td></tr>`).join('');
+  return `
+    <button class="back" onclick="back()">← Все квартиры</button>
+    <div class="card">
+      <div class="title" style="font-size:17px">${esc(a.address)}${a.unit ? ', ' + esc(a.unit) : ''}</div>
+      <div class="badges">${botBadges(a)}${kuBadge(a)}</div>
+    </div>
+    <div class="card"><div class="kv">
+      <div>Арендатор</div><div>${esc(a.tenant) || '—'}</div>
+      <div>Договор</div><div>${contract}</div>
+      <div>Заезд</div><div>${fmtDate(a.moveIn) || '—'}</div>
+      <div>Ставка аренды</div><div>${money(a.rent)}</div>
+      ${a.extra ? `<div>${esc(a.extraLabel || 'Доп. услуга')}</div><div>${money(a.extra)}</div>` : ''}
+      <div>Способ оплаты</div><div>${esc(a.payMethod)}</div>
+      <div>К оплате сейчас</div><div class="${a.dueNow > 0 ? 'sum-bad' : 'sum-ok'}"><b>${money(a.dueNow)}</b></div>
+    </div></div>
+    <div class="card">
+      <div class="row"><div class="title">Оплачено всего</div><div class="big sum-ok">${money(a.paidTotal.total)}</div></div>
+      <div class="muted">аренда ${money(a.paidTotal.rent)} · КУ и доп. услуги ${money(a.paidTotal.ku + a.paidTotal.extra)}</div>
+    </div>
+    <div class="card">
+      <div class="title" style="margin-bottom:6px">Счета</div>
+      ${rows ? `<table><tr><th>Дата</th><th class="n">Аренда</th><th class="n">КУ/доп.</th><th class="n">Итого</th><th></th></tr>${rows}</table>` : '<div class="muted">Счетов ещё не было</div>'}
+    </div>`;
+}
+
+function renderMonths() {
+  const totalPaid = DATA.months.reduce((s, m) => s + m.total, 0);
+  return `<div class="row muted" style="margin:0 2px 8px"><div>ПОЛУЧЕНО · ${DATA.months.length}</div><div class="sum-ok">${money(totalPaid)}</div></div>` +
+    DATA.months.map(m => {
+      const open = view.openMonth === m.month;
+      const done = m.unpaid === 0;
+      return `
+      <div class="card clickable" onclick="toggleMonth('${m.month}')">
+        <div class="row">
+          <div><div class="title">🗓 ${monthName(m.month)} ${done ? '✅' : '⏳'}</div>
+            <div class="muted">аренда ${money(m.rent)} · КУ и доп. ${money(m.ku + m.extra)}${m.unpaid ? ` · не оплачено: ${m.unpaid}` : ''}</div></div>
+          <div class="big">${money(m.total)} ${open ? '▴' : '▾'}</div>
+        </div>
+        ${open ? `<div class="items">${m.items.map(i => `
+          <div class="item row"><div><div>${esc(i.label)}</div><div class="muted">${esc(i.tenant)}</div></div>
+          <div class="${i.status === 'Оплачено' ? 'sum-ok' : 'sum-bad'}">${money(i.total)} ${i.status === 'Оплачено' ? '✅' : '❌'}</div></div>`).join('')}</div>` : ''}
+      </div>`;
+    }).join('');
+}
+
+function render() {
+  const app = document.getElementById('app');
+  if (view.apt) {
+    const a = DATA.apartments.find(x => x.id === view.apt);
+    app.innerHTML = renderApt(a);
+    return;
+  }
+  app.innerHTML = `
+    <h1>Аренда — админка</h1>
+    <div class="tabs">
+      <button class="tab ${view.tab === 'apts' ? 'active' : ''}" onclick="setTab('apts')">Квартиры</button>
+      <button class="tab ${view.tab === 'months' ? 'active' : ''}" onclick="setTab('months')">По месяцам</button>
+    </div>
+    ${view.tab === 'apts' ? renderApts() : renderMonths()}`;
+}
+
+function setTab(t) { view.tab = t; render(); }
+function openApt(id) { view.apt = id; render(); window.scrollTo(0, 0); if (tg) tg.BackButton.show(); }
+function back() { view.apt = null; render(); if (tg) tg.BackButton.hide(); }
+function toggleMonth(m) { view.openMonth = view.openMonth === m ? null : m; render(); }
+function openLink(ev, href) { ev.preventDefault(); ev.stopPropagation(); if (tg) tg.openLink(href); else window.open(href, '_blank'); }
+if (tg) tg.BackButton.onClick(back);
+
+async function load() {
+  const app = document.getElementById('app');
+  const initData = tg ? tg.initData : '';
+  if (!initData) { app.innerHTML = '<div class="center error">Откройте админку из Telegram-бота.</div>'; return; }
+  try {
+    const resp = await fetch(API_URL, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'}, body: JSON.stringify({initData})});
+    const res = await resp.json();
+    if (!res.ok) { app.innerHTML = `<div class="center error">${esc(res.error)}</div>`; return; }
+    DATA = res.data;
+    render();
+  } catch (e) {
+    app.innerHTML = '<div class="center error">Не удалось загрузить данные. Попробуйте ещё раз.</div>';
+  }
+}
+load();
+</script>
+</body>
+</html>
