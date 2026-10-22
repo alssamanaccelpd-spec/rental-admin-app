@@ -7,193 +7,354 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
   :root {
-    --bg: var(--tg-theme-bg-color, #0f1115);
-    --card: var(--tg-theme-secondary-bg-color, #1a1d24);
-    --text: var(--tg-theme-text-color, #f2f3f5);
-    --muted: var(--tg-theme-hint-color, #8b909a);
-    --accent: var(--tg-theme-button-color, #3d8bfd);
+    --bg: var(--tg-theme-secondary-bg-color, #f2f2f7);
+    --card: var(--tg-theme-section-bg-color, var(--tg-theme-bg-color, #ffffff));
+    --text: var(--tg-theme-text-color, #111111);
+    --muted: var(--tg-theme-subtitle-text-color, var(--tg-theme-hint-color, #8a8a8e));
+    --hint: var(--tg-theme-hint-color, #8a8a8e);
+    --section: var(--tg-theme-section-header-text-color, #6d6d72);
+    --accent: var(--tg-theme-button-color, #2481cc);
     --accent-text: var(--tg-theme-button-text-color, #ffffff);
-    --line: rgba(127, 127, 127, 0.18);
-    --ok: #2fb36b;
-    --bad: #e5484d;
-    --warn: #e8a33a;
+    --line: rgba(127, 127, 127, 0.16);
+    --ok: #26a65b;
+    --bad: var(--tg-theme-destructive-text-color, #e5484d);
+    --warn: #e0921f;
+    --ok-bg: rgba(38, 166, 91, 0.13);
+    --bad-bg: rgba(229, 72, 77, 0.12);
+    --warn-bg: rgba(224, 146, 31, 0.14);
+    --idle-bg: rgba(127, 127, 127, 0.13);
   }
-  * { box-sizing: border-box; }
+  @media (prefers-color-scheme: dark) {
+    :root:not(.tg) {
+      --bg: #000000; --card: #1c1c1e; --text: #f2f2f7; --muted: #98989f; --hint: #8d8d93; --section: #8d8d93;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
-    margin: 0; padding: 12px 16px 32px; background: var(--bg); color: var(--text);
-    font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0; padding: 14px 16px 40px; background: var(--bg); color: var(--text);
+    font: 15px/1.35 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
   }
-  h1 { font-size: 20px; margin: 4px 0 12px; }
-  .tabs { display: flex; gap: 8px; margin-bottom: 14px; }
-  .tab {
-    flex: 1; padding: 9px 0; border: 0; border-radius: 10px; background: var(--card);
-    color: var(--text); font-size: 14px; font-weight: 600; cursor: pointer;
-  }
-  .tab.active { background: var(--accent); color: var(--accent-text); }
-  .card { background: var(--card); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
-  .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-  .muted { color: var(--muted); font-size: 13px; }
-  .big { font-size: 20px; font-weight: 700; white-space: nowrap; }
-  .title { font-weight: 600; }
-  .badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
-  .badge { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--line); white-space: nowrap; }
-  .badge.ok { background: rgba(47, 179, 107, 0.18); color: var(--ok); }
-  .badge.bad { background: rgba(229, 72, 77, 0.18); color: var(--bad); }
-  .badge.warn { background: rgba(232, 163, 58, 0.18); color: var(--warn); }
-  .clickable { cursor: pointer; }
-  .sum-ok { color: var(--ok); }
-  .sum-bad { color: var(--bad); }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); }
-  th { color: var(--muted); font-weight: 500; }
-  td.n, th.n { text-align: right; white-space: nowrap; }
-  .kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 14px; }
-  .kv div:nth-child(odd) { color: var(--muted); }
-  .error { color: var(--bad); }
-  .items { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
-  .item { padding: 6px 0; }
-  .center { text-align: center; padding: 40px 0; }
-  a { color: var(--accent); }
-  .back { background: none; border: 0; color: var(--accent); font-size: 15px; padding: 0 0 10px; cursor: pointer; }
+  button { font: inherit; color: inherit; }
+
+  /* Шапка */
+  .head { display: flex; align-items: flex-end; justify-content: space-between; margin: 2px 2px 14px; }
+  .head h1 { font-size: 24px; line-height: 1.1; margin: 0; letter-spacing: -0.3px; }
+  .head .sub { color: var(--muted); font-size: 14px; margin-top: 3px; }
+  .icon-btn { border: 0; background: var(--card); width: 36px; height: 36px; border-radius: 50%; font-size: 17px; cursor: pointer; }
+
+  /* Сводка */
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .stat { background: var(--card); border-radius: 16px; padding: 12px 14px; min-width: 0; }
+  .stat .label { color: var(--muted); font-size: 12.5px; }
+  .stat .value { font-size: 21px; font-weight: 700; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.3px; }
+  .stat .note { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .stat.alert .value { color: var(--bad); }
+  .stat.good .value { color: var(--ok); }
+
+  /* Переключатель */
+  .seg { display: flex; background: var(--idle-bg); border-radius: 11px; padding: 3px; margin-bottom: 12px; }
+  .seg button { flex: 1; border: 0; background: transparent; padding: 8px 0; border-radius: 9px; font-size: 14px; font-weight: 600; color: var(--muted); cursor: pointer; }
+  .seg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+  .chips { display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px 6px; padding: 0 16px 4px; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { flex: none; border: 0; background: var(--card); color: var(--text); padding: 6px 12px; border-radius: 999px; font-size: 13px; cursor: pointer; }
+  .chip.on { background: var(--accent); color: var(--accent-text); }
+  .chip .n { opacity: 0.6; margin-left: 4px; }
+
+  /* Группы-списки */
+  .section-title { color: var(--section); font-size: 13px; text-transform: uppercase; letter-spacing: 0.3px; margin: 18px 4px 7px; display: flex; justify-content: space-between; }
+  .group { background: var(--card); border-radius: 16px; overflow: hidden; }
+  .item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; position: relative; }
+  .item + .item::before { content: ""; position: absolute; top: 0; left: 62px; right: 0; border-top: 1px solid var(--line); }
+  .item.tap { cursor: pointer; }
+  .item.tap:active { background: var(--idle-bg); }
+  .avatar { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 14px; background: var(--idle-bg); color: var(--muted); }
+  .avatar.ok { background: var(--ok-bg); color: var(--ok); }
+  .avatar.bad { background: var(--bad-bg); color: var(--bad); }
+  .avatar.warn { background: var(--warn-bg); color: var(--warn); }
+  .grow { flex: 1; min-width: 0; }
+  .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .name.empty { color: var(--hint); font-weight: 500; }
+  .meta { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+  .pill { font-size: 11.5px; line-height: 1; padding: 4px 7px; border-radius: 6px; background: var(--idle-bg); color: var(--muted); white-space: nowrap; }
+  .pill.ok { background: var(--ok-bg); color: var(--ok); }
+  .pill.bad { background: var(--bad-bg); color: var(--bad); }
+  .pill.warn { background: var(--warn-bg); color: var(--warn); }
+  .right { text-align: right; flex: none; }
+  .amount { font-weight: 700; white-space: nowrap; }
+  .amount.bad { color: var(--bad); }
+  .amount.ok { color: var(--ok); }
+  .chev { color: var(--hint); font-size: 18px; margin-left: 2px; flex: none; }
+  .small { color: var(--muted); font-size: 12.5px; }
+
+  /* Карточка квартиры */
+  .back { border: 0; background: none; color: var(--accent); font-size: 16px; padding: 2px 0 12px; cursor: pointer; }
+  .hero { background: var(--card); border-radius: 18px; padding: 16px; }
+  .hero .addr { color: var(--muted); font-size: 13.5px; }
+  .hero .who { font-size: 21px; font-weight: 700; margin: 3px 0 12px; letter-spacing: -0.2px; }
+  .hero .due-label { color: var(--muted); font-size: 13px; }
+  .hero .due { font-size: 30px; font-weight: 800; letter-spacing: -0.5px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; position: relative; }
+  .row + .row::before { content: ""; position: absolute; top: 0; left: 14px; right: 0; border-top: 1px solid var(--line); }
+  .row .k { color: var(--muted); }
+  .row .v { text-align: right; font-weight: 500; }
+  .btn { display: inline-block; border: 0; background: var(--accent); color: var(--accent-text); border-radius: 10px; padding: 7px 12px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; }
+  .warnbox { background: var(--bad-bg); color: var(--bad); border-radius: 12px; padding: 10px 12px; font-size: 14px; margin: 10px 14px 12px; }
+
+  /* Месяцы */
+  .month { background: var(--card); border-radius: 16px; padding: 14px; margin-bottom: 10px; cursor: pointer; }
+  .month .top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .month .title { font-weight: 700; font-size: 16px; }
+  .month .sum { font-weight: 800; font-size: 19px; color: var(--ok); white-space: nowrap; }
+  .bar { height: 6px; background: var(--idle-bg); border-radius: 99px; overflow: hidden; margin: 10px 0 8px; }
+  .bar > div { height: 100%; background: var(--ok); border-radius: 99px; }
+  .split { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 13px; }
+  .split b { color: var(--text); font-weight: 600; }
+  .month .list { margin: 12px -14px -14px; border-top: 1px solid var(--line); }
+
+  .center { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .center.error { color: var(--bad); }
+  .empty-note { padding: 16px; text-align: center; color: var(--muted); font-size: 14px; }
 </style>
 </head>
 <body>
-<div id="app"><div class="center muted">Загрузка…</div></div>
+<div id="app"><div class="center">Загрузка…</div></div>
 <script>
 // Адрес API (Google Apps Script, развёрнутый как веб-приложение). Данных и
 // секретов на этой странице нет: всё приходит от API только после проверки
 // подписи Telegram и только админам.
 const API_URL = 'https://script.google.com/macros/s/AKfycbxYYiThB3LniUwDx0MWfIX8rMLps7tlu_Gp3PaYjBQQywrzc0_5SpoN2gEhXalUFr75-w/exec';
 
-const tg = window.Telegram && window.Telegram.WebApp;
-if (tg) { tg.ready(); tg.expand(); }
+const tg = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData ? window.Telegram.WebApp : null;
+if (tg) {
+  document.documentElement.classList.add('tg');
+  tg.ready(); tg.expand();
+  try { tg.setHeaderColor('secondary_bg_color'); tg.setBackgroundColor('secondary_bg_color'); } catch (e) {}
+}
 
 const MONTHS = ['январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь'];
-const monthName = m => { const [y, mm] = m.split('-'); const n = MONTHS[+mm - 1]; return n[0].toUpperCase() + n.slice(1) + ' ' + y; };
+const cap = s => s ? s[0].toUpperCase() + s.slice(1) : s;
+const monthName = m => { const [y, mm] = m.split('-'); return cap(MONTHS[+mm - 1]) + ' ' + y; };
+const monthShort = m => cap(MONTHS[+m.split('-')[1] - 1]);
 const money = v => (Math.round((v || 0) * 100) / 100).toLocaleString('ru-RU', {maximumFractionDigits: 2}) + ' ₽';
 const fmtDate = d => d ? d.split('-').reverse().join('.') : '';
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const PAID = 'Оплачено', PENDING = 'На согласовании';
 
 let DATA = null;
-let view = {tab: 'apts', apt: null, openMonth: null};
+let view = {tab: 'apts', filter: 'all', apt: null, openMonth: null};
 
-function statusBadge(inv) {
-  if (!inv) return '<span class="badge">🚫 счетов нет</span>';
-  const label = monthName(inv.month).toLowerCase();
-  if (inv.status === 'Оплачено') return `<span class="badge ok">✅ ${label} оплачен</span>`;
-  if (inv.status === 'На согласовании') return `<span class="badge warn">⏳ ${label} на согласовании</span>`;
-  return `<span class="badge bad">❌ ${label} не оплачен</span>`;
+/* ---------- Вспомогательное ---------- */
+
+const occupied = a => !!a.tenant;
+const unitNo = a => (a.unit.match(/\d+/) || [a.id.split('-').pop()])[0];
+const hasContract = a => !!(a.contractDate && a.contractUrl);
+const kuMissing = a => occupied(a) && a.manualKu && a.kuMonth === null;
+const inBot = a => a.inTg || a.inMax;
+
+function invoiceState(a) {
+  const inv = a.lastInvoice;
+  if (!inv) return {cls: '', text: 'счетов нет'};
+  const m = monthShort(inv.month).toLowerCase();
+  if (inv.status === PAID) return {cls: 'ok', text: m + ' оплачен'};
+  if (inv.status === PENDING) return {cls: 'warn', text: m + ' на согласовании'};
+  return {cls: 'bad', text: m + ' не оплачен'};
 }
-function botBadges(a) {
-  const tgB = a.inTg ? '<span class="badge ok">TG ✓</span>' : '<span class="badge">TG —</span>';
-  const mxB = a.inMax ? '<span class="badge ok">MAX ✓</span>' : '<span class="badge">MAX —</span>';
-  const none = (!a.inTg && !a.inMax) ? '<span class="badge bad">не в боте</span>' : '';
-  return tgB + mxB + none;
+
+function avatarClass(a) {
+  if (!occupied(a)) return '';
+  if (a.dueNow > 0) return 'bad';
+  if (kuMissing(a) || !hasContract(a) || !inBot(a)) return 'warn';
+  return 'ok';
 }
-function kuBadge(a) {
-  if (!a.manualKu) return '<span class="badge">КУ 🚫 не нужна</span>';
-  return a.kuMonth === null ? '<span class="badge bad">КУ ❌ не прислана</span>' : `<span class="badge ok">КУ ✅ ${money(a.kuMonth)}</span>`;
+
+const FILTERS = [
+  ['all', 'Все', a => true],
+  ['debt', 'Долг', a => a.dueNow > 0],
+  ['ku', 'Нет КУ', kuMissing],
+  ['contract', 'Нет договора', a => occupied(a) && !hasContract(a)],
+  ['free', 'Свободные', a => !occupied(a)],
+];
+
+/* ---------- Экраны ---------- */
+
+function renderStats() {
+  const apts = DATA.apartments;
+  const debt = apts.reduce((s, a) => s + a.dueNow, 0);
+  const debtors = apts.filter(a => a.dueNow > 0).length;
+  const cur = DATA.months.find(m => m.month === DATA.today);
+  const busy = apts.filter(occupied).length;
+  const kuNeed = apts.filter(a => occupied(a) && a.manualKu);
+  const kuDone = kuNeed.filter(a => a.kuMonth !== null).length;
+  return `<div class="stats">
+    <div class="stat ${debt > 0 ? 'alert' : 'good'}"><div class="label">Ждём оплату</div>
+      <div class="value">${debt > 0 ? money(debt) : 'Долгов нет'}</div>
+      <div class="note">${debtors ? debtors + ' ' + plural(debtors, 'квартира', 'квартиры', 'квартир') : 'всё оплачено'}</div></div>
+    <div class="stat good"><div class="label">Получено за ${monthShort(DATA.today).toLowerCase()}</div>
+      <div class="value">${money(cur ? cur.total : 0)}</div>
+      <div class="note">${cur ? 'оплачено ' + cur.paid + ' из ' + (cur.paid + cur.unpaid) : 'счетов ещё нет'}</div></div>
+    <div class="stat"><div class="label">Сдано</div>
+      <div class="value">${busy} из ${apts.length}</div>
+      <div class="note">${apts.length - busy ? (apts.length - busy) + ' свободно' : 'все заняты'}</div></div>
+    <div class="stat ${kuDone < kuNeed.length ? 'alert' : ''}"><div class="label">КУ за ${monthShort(DATA.today).toLowerCase()}</div>
+      <div class="value">${kuDone} из ${kuNeed.length}</div>
+      <div class="note">${kuDone < kuNeed.length ? 'не всё внесено' : 'внесены все'}</div></div>
+  </div>`;
 }
-function contractBadge(a) {
-  return (a.contractDate && a.contractUrl) ? '' : '<span class="badge bad">⚠️ нет данных договора</span>';
+
+function plural(n, one, few, many) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return one;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+  return many;
+}
+
+function aptRow(a) {
+  const inv = invoiceState(a);
+  let pills = '';
+  if (occupied(a)) {
+    pills += `<span class="pill ${inv.cls}">${esc(inv.text)}</span>`;
+    if (a.manualKu) pills += a.kuMonth === null ? '<span class="pill bad">КУ не внесена</span>' : '<span class="pill ok">КУ ' + money(a.kuMonth) + '</span>';
+    pills += inBot(a) ? `<span class="pill">${[a.inTg ? 'Telegram' : '', a.inMax ? 'MAX' : ''].filter(Boolean).join(' · ')}</span>` : '<span class="pill warn">не в боте</span>';
+    if (!hasContract(a)) pills += '<span class="pill bad">нет договора</span>';
+  } else {
+    pills = '<span class="pill">свободна</span>';
+  }
+  const right = a.dueNow > 0 ? `<div class="amount bad">${money(a.dueNow)}</div><div class="small">к оплате</div>`
+    : (occupied(a) ? `<div class="small">${money(a.rent)}</div>` : '');
+  return `<div class="item tap" onclick="openApt('${esc(a.id)}')">
+    <div class="avatar ${avatarClass(a)}">${esc(unitNo(a))}</div>
+    <div class="grow"><div class="name ${occupied(a) ? '' : 'empty'}">${occupied(a) ? esc(a.tenant) : 'Нет арендатора'}</div><div class="meta">${pills}</div></div>
+    <div class="right">${right}</div><div class="chev">›</div>
+  </div>`;
 }
 
 function renderApts() {
-  return DATA.apartments.map(a => `
-    <div class="card clickable" onclick="openApt('${esc(a.id)}')">
-      <div class="row">
-        <div>
-          <div class="title">${esc(a.address)}${a.unit ? ', ' + esc(a.unit) : ''}</div>
-          <div class="muted">${esc(a.tenant) || 'арендатор не указан'}</div>
-        </div>
-        <div class="big ${a.dueNow > 0 ? 'sum-bad' : ''}">${a.dueNow > 0 ? money(a.dueNow) : ''}</div>
-      </div>
-      <div class="badges">${statusBadge(a.lastInvoice)}${kuBadge(a)}${botBadges(a)}${contractBadge(a)}</div>
-    </div>`).join('');
+  const f = FILTERS.find(x => x[0] === view.filter);
+  const chips = FILTERS.map(([key, label, fn]) => {
+    const n = DATA.apartments.filter(fn).length;
+    if (key !== 'all' && !n) return '';
+    return `<button class="chip ${view.filter === key ? 'on' : ''}" onclick="setFilter('${key}')">${label}<span class="n">${n}</span></button>`;
+  }).join('');
+  const list = DATA.apartments.filter(f[2]);
+  const groups = [];
+  list.forEach(a => {
+    let g = groups.find(x => x.address === a.address);
+    if (!g) groups.push(g = {address: a.address, items: []});
+    g.items.push(a);
+  });
+  const body = groups.length ? groups.map(g => `
+    <div class="section-title"><span>${esc(g.address)}</span><span>${g.items.length}</span></div>
+    <div class="group">${g.items.map(aptRow).join('')}</div>`).join('')
+    : '<div class="empty-note">Здесь пусто</div>';
+  return `<div class="chips">${chips}</div>${body}`;
 }
 
 function renderApt(a) {
-  const contract = (a.contractDate && a.contractUrl)
-    ? `${fmtDate(a.contractDate)} · <a href="${esc(a.contractUrl)}" onclick="openLink(event, this.href)">открыть</a>`
-    : `<span class="error">⚠️ ${!a.contractDate && !a.contractUrl ? 'нет даты и ссылки' : (!a.contractDate ? 'нет даты' : 'нет ссылки')}</span>`;
-  const rows = a.history.map(r => `
-    <tr><td>${fmtDate(r.date)}</td><td class="n">${money(r.rent)}</td><td class="n">${money(r.ku + r.extra)}</td>
-    <td class="n">${money(r.total)}</td><td>${r.status === 'Оплачено' ? '✅' : (r.status === 'На согласовании' ? '⏳' : '❌')}</td></tr>`).join('');
-  return `
-    <button class="back" onclick="back()">← Все квартиры</button>
-    <div class="card">
-      <div class="title" style="font-size:17px">${esc(a.address)}${a.unit ? ', ' + esc(a.unit) : ''}</div>
-      <div class="badges">${botBadges(a)}${kuBadge(a)}</div>
-    </div>
-    <div class="card"><div class="kv">
-      <div>Арендатор</div><div>${esc(a.tenant) || '—'}</div>
-      <div>Договор</div><div>${contract}</div>
-      <div>Заезд</div><div>${fmtDate(a.moveIn) || '—'}</div>
-      <div>Ставка аренды</div><div>${money(a.rent)}</div>
-      ${a.extra ? `<div>${esc(a.extraLabel || 'Доп. услуга')}</div><div>${money(a.extra)}</div>` : ''}
-      <div>Способ оплаты</div><div>${esc(a.payMethod)}</div>
-      <div>К оплате сейчас</div><div class="${a.dueNow > 0 ? 'sum-bad' : 'sum-ok'}"><b>${money(a.dueNow)}</b></div>
-    </div></div>
-    <div class="card">
-      <div class="row"><div class="title">Оплачено всего</div><div class="big sum-ok">${money(a.paidTotal.total)}</div></div>
-      <div class="muted">аренда ${money(a.paidTotal.rent)} · КУ и доп. услуги ${money(a.paidTotal.ku + a.paidTotal.extra)}</div>
-    </div>
-    <div class="card">
-      <div class="title" style="margin-bottom:6px">Счета</div>
-      ${rows ? `<table><tr><th>Дата</th><th class="n">Аренда</th><th class="n">КУ/доп.</th><th class="n">Итого</th><th></th></tr>${rows}</table>` : '<div class="muted">Счетов ещё не было</div>'}
+  const contract = hasContract(a)
+    ? `<div class="row"><span class="k">Договор от</span><span class="v">${fmtDate(a.contractDate)}</span></div>
+       <div class="row"><span class="k">Скан договора</span><a class="btn" href="${esc(a.contractUrl)}" onclick="openLink(event, this.href)">Открыть</a></div>`
+    : `<div class="warnbox">⚠️ ${!a.contractDate && !a.contractUrl ? 'Нет даты и ссылки на договор' : (!a.contractDate ? 'Нет даты договора' : 'Нет ссылки на договор')}. Заполните столбцы «Дата договора» и «Ссылка на договор» в листе «Условия аренды».</div>`;
+  const invoices = a.history.map(r => {
+    const st = r.status === PAID ? ['ok', 'оплачен'] : (r.status === PENDING ? ['warn', 'согласование'] : ['bad', 'не оплачен']);
+    const parts = ['аренда ' + money(r.rent)];
+    if (r.ku) parts.push('КУ ' + money(r.ku));
+    if (r.extra) parts.push('доп. ' + money(r.extra));
+    return `<div class="item">
+      <div class="grow"><div class="name">${monthName(r.month)}</div><div class="small">${fmtDate(r.date)} · ${parts.join(' · ')}</div></div>
+      <div class="right"><div class="amount">${money(r.total)}</div><span class="pill ${st[0]}">${st[1]}</span></div>
     </div>`;
+  }).join('');
+  return `
+    <button class="back" onclick="back()">‹ Все квартиры</button>
+    <div class="hero">
+      <div class="addr">${esc(a.address)}${a.unit ? ', ' + esc(a.unit) : ''}</div>
+      <div class="who">${occupied(a) ? esc(a.tenant) : 'Нет арендатора'}</div>
+      <div class="due-label">К оплате сейчас</div>
+      <div class="due ${a.dueNow > 0 ? 'amount bad' : 'amount ok'}">${a.dueNow > 0 ? money(a.dueNow) : '0 ₽ ✓'}</div>
+    </div>
+
+    <div class="section-title">Договор</div>
+    <div class="group">${contract}</div>
+
+    <div class="section-title">Условия</div>
+    <div class="group">
+      <div class="row"><span class="k">Аренда в месяц</span><span class="v">${money(a.rent)}</span></div>
+      ${a.extra ? `<div class="row"><span class="k">${esc(a.extraLabel || 'Доп. услуга')}</span><span class="v">${money(a.extra)}</span></div>` : ''}
+      <div class="row"><span class="k">Оплата</span><span class="v">${esc(a.payMethod)}</span></div>
+      <div class="row"><span class="k">Заезд</span><span class="v">${fmtDate(a.moveIn) || '—'}</span></div>
+      <div class="row"><span class="k">КУ за ${monthShort(DATA.today).toLowerCase()}</span><span class="v">${!a.manualKu ? 'по показаниям' : (a.kuMonth === null ? '<span class="amount bad">не внесена</span>' : money(a.kuMonth))}</span></div>
+    </div>
+
+    <div class="section-title">Бот</div>
+    <div class="group">
+      <div class="row"><span class="k">Telegram</span><span class="v">${a.inTg ? '<span class="pill ok">подключён</span>' : '<span class="pill">нет</span>'}</span></div>
+      <div class="row"><span class="k">MAX</span><span class="v">${a.inMax ? '<span class="pill ok">подключён</span>' : '<span class="pill">нет</span>'}</span></div>
+    </div>
+
+    <div class="section-title"><span>Счета</span><span>оплачено ${money(a.paidTotal.total)}</span></div>
+    <div class="group">${invoices || '<div class="empty-note">Счетов ещё не было</div>'}</div>`;
 }
 
 function renderMonths() {
-  const totalPaid = DATA.months.reduce((s, m) => s + m.total, 0);
-  return `<div class="row muted" style="margin:0 2px 8px"><div>ПОЛУЧЕНО · ${DATA.months.length}</div><div class="sum-ok">${money(totalPaid)}</div></div>` +
-    DATA.months.map(m => {
-      const open = view.openMonth === m.month;
-      const done = m.unpaid === 0;
-      return `
-      <div class="card clickable" onclick="toggleMonth('${m.month}')">
-        <div class="row">
-          <div><div class="title">🗓 ${monthName(m.month)} ${done ? '✅' : '⏳'}</div>
-            <div class="muted">аренда ${money(m.rent)} · КУ и доп. ${money(m.ku + m.extra)}${m.unpaid ? ` · не оплачено: ${m.unpaid}` : ''}</div></div>
-          <div class="big">${money(m.total)} ${open ? '▴' : '▾'}</div>
-        </div>
-        ${open ? `<div class="items">${m.items.map(i => `
-          <div class="item row"><div><div>${esc(i.label)}</div><div class="muted">${esc(i.tenant)}</div></div>
-          <div class="${i.status === 'Оплачено' ? 'sum-ok' : 'sum-bad'}">${money(i.total)} ${i.status === 'Оплачено' ? '✅' : '❌'}</div></div>`).join('')}</div>` : ''}
-      </div>`;
-    }).join('');
+  if (!DATA.months.length) return '<div class="empty-note">Счетов ещё не было</div>';
+  return DATA.months.map(m => {
+    const open = view.openMonth === m.month;
+    const count = m.paid + m.unpaid;
+    const pct = count ? Math.round(m.paid / count * 100) : 0;
+    const items = open ? `<div class="list">${m.items.map(i => {
+      const ok = i.status === PAID;
+      return `<div class="item"><div class="grow"><div class="name">${esc(i.tenant) || '—'}</div><div class="small">${esc(i.label)}</div></div>
+        <div class="right"><div class="amount ${ok ? 'ok' : 'bad'}">${money(i.total)}</div><span class="pill ${ok ? 'ok' : (i.status === PENDING ? 'warn' : 'bad')}">${ok ? 'оплачен' : (i.status === PENDING ? 'согласование' : 'не оплачен')}</span></div></div>`;
+    }).join('')}</div>` : '';
+    return `<div class="month" onclick="toggleMonth('${m.month}')">
+      <div class="top"><div class="title">${monthName(m.month)}</div><div class="sum">${money(m.total)}</div></div>
+      <div class="bar"><div style="width:${pct}%"></div></div>
+      <div class="split"><span>Оплачено <b>${m.paid} из ${count}</b></span><span>Аренда <b>${money(m.rent)}</b></span><span>КУ и доп. <b>${money(m.ku + m.extra)}</b></span></div>
+      ${items}
+    </div>`;
+  }).join('');
 }
 
 function render() {
   const app = document.getElementById('app');
   if (view.apt) {
-    const a = DATA.apartments.find(x => x.id === view.apt);
-    app.innerHTML = renderApt(a);
+    app.innerHTML = renderApt(DATA.apartments.find(x => x.id === view.apt));
     return;
   }
   app.innerHTML = `
-    <h1>Аренда — админка</h1>
-    <div class="tabs">
-      <button class="tab ${view.tab === 'apts' ? 'active' : ''}" onclick="setTab('apts')">Квартиры</button>
-      <button class="tab ${view.tab === 'months' ? 'active' : ''}" onclick="setTab('months')">По месяцам</button>
+    <div class="head"><div><h1>Аренда</h1><div class="sub">${monthName(DATA.today)}</div></div>
+      <button class="icon-btn" onclick="reload()" aria-label="Обновить">↻</button></div>
+    ${renderStats()}
+    <div class="seg">
+      <button class="${view.tab === 'apts' ? 'on' : ''}" onclick="setTab('apts')">Квартиры</button>
+      <button class="${view.tab === 'months' ? 'on' : ''}" onclick="setTab('months')">По месяцам</button>
     </div>
     ${view.tab === 'apts' ? renderApts() : renderMonths()}`;
 }
 
 function setTab(t) { view.tab = t; render(); }
+function setFilter(f) { view.filter = f; render(); }
 function openApt(id) { view.apt = id; render(); window.scrollTo(0, 0); if (tg) tg.BackButton.show(); }
 function back() { view.apt = null; render(); if (tg) tg.BackButton.hide(); }
 function toggleMonth(m) { view.openMonth = view.openMonth === m ? null : m; render(); }
 function openLink(ev, href) { ev.preventDefault(); ev.stopPropagation(); if (tg) tg.openLink(href); else window.open(href, '_blank'); }
+function reload() { document.getElementById('app').innerHTML = '<div class="center">Обновляю…</div>'; load(); }
 if (tg) tg.BackButton.onClick(back);
 
 async function load() {
   const app = document.getElementById('app');
-  const initData = tg ? tg.initData : '';
-  if (!initData) { app.innerHTML = '<div class="center error">Откройте админку из Telegram-бота.</div>'; return; }
   try {
-    const resp = await fetch(API_URL, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'}, body: JSON.stringify({initData})});
-    const res = await resp.json();
+    let res;
+    if (tg) {
+      const resp = await fetch(API_URL, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'}, body: JSON.stringify({initData: tg.initData})});
+      res = await resp.json();
+    } else if (location.hash === '#demo') {
+      res = await fetch('demo.json').then(r => r.json());
+    } else {
+      app.innerHTML = '<div class="center error">Откройте админку из Telegram-бота.</div>';
+      return;
+    }
     if (!res.ok) { app.innerHTML = `<div class="center error">${esc(res.error)}</div>`; return; }
     DATA = res.data;
     render();
