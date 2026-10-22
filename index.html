@@ -40,6 +40,7 @@
   .head { display: flex; align-items: flex-end; justify-content: space-between; margin: 2px 2px 14px; }
   .head h1 { font-size: 24px; line-height: 1.1; margin: 0; letter-spacing: -0.3px; }
   .head .sub { color: var(--muted); font-size: 14px; margin-top: 3px; }
+  #sync { font-size: 12px; margin-left: 6px; }
   .icon-btn { border: 0; background: var(--card); width: 36px; height: 36px; border-radius: 50%; font-size: 17px; cursor: pointer; }
 
   /* Сводка */
@@ -73,7 +74,7 @@
   .avatar.bad { background: var(--bad-bg); color: var(--bad); }
   .avatar.warn { background: var(--warn-bg); color: var(--warn); }
   .grow { flex: 1; min-width: 0; }
-  .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .name { font-weight: 600; overflow-wrap: anywhere; }
   .name.empty { color: var(--hint); font-weight: 500; }
   .meta { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
   .pill { font-size: 11.5px; line-height: 1; padding: 4px 7px; border-radius: 6px; background: var(--idle-bg); color: var(--muted); white-space: nowrap; }
@@ -173,8 +174,8 @@ function invoiceState(a) {
 
 function avatarClass(a) {
   if (!occupied(a)) return '';
-  if (a.dueNow > 0) return 'bad';
-  if (kuMissing(a) || !hasContract(a) || !inBot(a) || endsSoon(a)) return 'warn';
+  if (a.dueNow > 0 || endsSoon(a)) return 'bad';
+  if (kuMissing(a) || !hasContract(a) || !inBot(a)) return 'warn';
   return 'ok';
 }
 
@@ -207,9 +208,9 @@ function renderStats() {
     <div class="stat"><div class="label">Сдано</div>
       <div class="value">${busy} из ${apts.length}</div>
       <div class="note">${apts.length - busy ? (apts.length - busy) + ' свободно' : 'все заняты'}</div></div>
-    <div class="stat ${kuDone < kuNeed.length ? 'alert' : ''}"><div class="label">КУ за ${monthShort(DATA.today).toLowerCase()}</div>
+    <div class="stat ${kuDone < kuNeed.length ? 'alert' : ''}"><div class="label">КУ внесены за ${monthShort(DATA.today).toLowerCase()}</div>
       <div class="value">${kuDone} из ${kuNeed.length}</div>
-      <div class="note">${kuDone < kuNeed.length ? 'не всё внесено' : 'внесены все'}</div></div>
+      <div class="note">квартиры, где КУ вносит Маша</div></div>
   </div>`;
 }
 
@@ -228,7 +229,9 @@ function aptRow(a) {
     if (a.manualKu) pills += a.kuMonth === null ? '<span class="pill bad">КУ не внесена</span>' : '<span class="pill ok">КУ ' + money(a.kuMonth) + '</span>';
     pills += inBot(a) ? `<span class="pill">${[a.inTg ? 'Telegram' : '', a.inMax ? 'MAX' : ''].filter(Boolean).join(' · ')}</span>` : '<span class="pill warn">не в боте</span>';
     if (!hasContract(a)) pills += '<span class="pill bad">нет договора</span>';
-    else if (a.contractEnd) pills += `<span class="pill ${endsSoon(a) ? 'warn' : ''}">до ${fmtDate(a.contractEnd)}</span>`;
+    else if (a.contractEnd) pills += endsSoon(a)
+      ? `<span class="pill bad">договор до ${fmtDate(a.contractEnd)} · ${leftText(daysLeft(a.contractEnd))}</span>`
+      : `<span class="pill">до ${fmtDate(a.contractEnd)}</span>`;
   } else {
     pills = '<span class="pill">свободна</span>';
   }
@@ -295,10 +298,12 @@ function renderApt(a) {
     <div class="section-title">Условия</div>
     <div class="group">
       <div class="row"><span class="k">Аренда в месяц</span><span class="v">${money(a.rent)}</span></div>
-      ${a.extra ? `<div class="row"><span class="k">${esc(a.extraLabel || 'Доп. услуга')}</span><span class="v">${money(a.extra)}</span></div>` : ''}
+      ${a.extra ? `<div class="row"><span class="k">${esc(a.extraLabel || 'Доп. услуга')}</span><span class="v">${money(a.extra)}<div class="small">фиксированно, в каждом счёте</div></span></div>` : ''}
       <div class="row"><span class="k">Оплата</span><span class="v">${esc(a.payMethod)}</span></div>
       <div class="row"><span class="k">Заезд</span><span class="v">${fmtDate(a.moveIn) || '—'}</span></div>
-      <div class="row"><span class="k">КУ за ${monthShort(DATA.today).toLowerCase()}</span><span class="v">${!a.manualKu ? 'по показаниям' : (a.kuMonth === null ? '<span class="amount bad">не внесена</span>' : money(a.kuMonth))}</span></div>
+      ${a.manualKu ? `<div class="row"><span class="k">КУ за ${monthShort(DATA.today).toLowerCase()}</span><span class="v">${a.kuMonth === null
+        ? '<span class="amount bad">ещё не внесена</span><div class="small">Маша вносит до 28-го, сумма войдёт в счёт в конце месяца</div>'
+        : money(a.kuMonth) + '<div class="small">внесена Машей, войдёт в счёт в конце месяца</div>'}</span></div>` : ''}
     </div>
 
     <div class="section-title">Бот</div>
@@ -338,7 +343,7 @@ function render() {
     return;
   }
   app.innerHTML = `
-    <div class="head"><div><h1>Аренда</h1><div class="sub">${monthName(DATA.today)}</div></div>
+    <div class="head"><div><h1>Аренда</h1><div class="sub">${monthName(DATA.today)} <span id="sync"></span></div></div>
       <button class="icon-btn" onclick="reload()" aria-label="Обновить">↻</button></div>
     ${renderStats()}
     <div class="seg">
@@ -354,15 +359,22 @@ function openApt(id) { view.apt = id; render(); window.scrollTo(0, 0); if (tg) t
 function back() { view.apt = null; render(); if (tg) tg.BackButton.hide(); }
 function toggleMonth(m) { view.openMonth = view.openMonth === m ? null : m; render(); }
 function openLink(ev, href) { ev.preventDefault(); ev.stopPropagation(); if (tg) tg.openLink(href); else window.open(href, '_blank'); }
-function reload() { document.getElementById('app').innerHTML = '<div class="center">Обновляю…</div>'; load(); }
+function reload() { setSync('Обновляю…'); load(true); }
 if (tg) tg.BackButton.onClick(back);
 
-async function load() {
+// Последние полученные данные лежат на телефоне админа: при открытии
+// админка показывает их сразу, а свежие подтягивает в фоне.
+const STORE_KEY = 'admin_data_v1';
+function readStored() { try { return JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch (e) { return null; } }
+function writeStored(d) { try { localStorage.setItem(STORE_KEY, JSON.stringify(d)); } catch (e) {} }
+function setSync(text) { const el = document.getElementById('sync'); if (el) el.textContent = text; }
+
+async function load(fresh) {
   const app = document.getElementById('app');
   try {
     let res;
     if (tg) {
-      const resp = await fetch(API_URL, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'}, body: JSON.stringify({initData: tg.initData})});
+      const resp = await fetch(API_URL, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'}, body: JSON.stringify({initData: tg.initData, fresh: !!fresh})});
       res = await resp.json();
     } else if (location.hash === '#demo') {
       res = await fetch('demo.json').then(r => r.json());
@@ -372,12 +384,19 @@ async function load() {
     }
     if (!res.ok) { app.innerHTML = `<div class="center error">${esc(res.error)}</div>`; return; }
     DATA = res.data;
+    if (tg) writeStored(DATA);
     render();
   } catch (e) {
-    app.innerHTML = '<div class="center error">Не удалось загрузить данные. Попробуйте ещё раз.</div>';
+    if (DATA) setSync('Нет связи — показаны прошлые данные');
+    else app.innerHTML = '<div class="center error">Не удалось загрузить данные. Попробуйте ещё раз.</div>';
   }
 }
-load();
+
+if (tg) {
+  const stored = readStored();
+  if (stored) { DATA = stored; render(); setSync('Обновляю…'); }
+}
+load(false);
 </script>
 </body>
 </html>
