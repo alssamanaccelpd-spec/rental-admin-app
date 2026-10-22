@@ -151,6 +151,16 @@ const unitNo = a => (a.unit.match(/\d+/) || [a.id.split('-').pop()])[0];
 const hasContract = a => !!(a.contractDate && a.contractUrl);
 const kuMissing = a => occupied(a) && a.manualKu && a.kuMonth === null;
 const inBot = a => a.inTg || a.inMax;
+const SOON_DAYS = 60;
+const daysLeft = d => d ? Math.ceil((new Date(d + 'T00:00:00') - new Date(new Date().toDateString())) / 86400000) : null;
+const endsSoon = a => occupied(a) && a.contractEnd && daysLeft(a.contractEnd) <= SOON_DAYS;
+function leftText(n) {
+  if (n < 0) return 'истёк ' + (-n) + ' ' + plural(-n, 'день', 'дня', 'дней') + ' назад';
+  if (n === 0) return 'истекает сегодня';
+  if (n < 60) return 'осталось ' + n + ' ' + plural(n, 'день', 'дня', 'дней');
+  const m = Math.floor(n / 30.44);
+  return 'осталось ' + m + ' ' + plural(m, 'месяц', 'месяца', 'месяцев');
+}
 
 function invoiceState(a) {
   const inv = a.lastInvoice;
@@ -164,7 +174,7 @@ function invoiceState(a) {
 function avatarClass(a) {
   if (!occupied(a)) return '';
   if (a.dueNow > 0) return 'bad';
-  if (kuMissing(a) || !hasContract(a) || !inBot(a)) return 'warn';
+  if (kuMissing(a) || !hasContract(a) || !inBot(a) || endsSoon(a)) return 'warn';
   return 'ok';
 }
 
@@ -173,6 +183,7 @@ const FILTERS = [
   ['debt', 'Долг', a => a.dueNow > 0],
   ['ku', 'Нет КУ', kuMissing],
   ['contract', 'Нет договора', a => occupied(a) && !hasContract(a)],
+  ['ends', 'Договор истекает', endsSoon],
   ['free', 'Свободные', a => !occupied(a)],
 ];
 
@@ -217,6 +228,7 @@ function aptRow(a) {
     if (a.manualKu) pills += a.kuMonth === null ? '<span class="pill bad">КУ не внесена</span>' : '<span class="pill ok">КУ ' + money(a.kuMonth) + '</span>';
     pills += inBot(a) ? `<span class="pill">${[a.inTg ? 'Telegram' : '', a.inMax ? 'MAX' : ''].filter(Boolean).join(' · ')}</span>` : '<span class="pill warn">не в боте</span>';
     if (!hasContract(a)) pills += '<span class="pill bad">нет договора</span>';
+    else if (a.contractEnd) pills += `<span class="pill ${endsSoon(a) ? 'warn' : ''}">до ${fmtDate(a.contractEnd)}</span>`;
   } else {
     pills = '<span class="pill">свободна</span>';
   }
@@ -253,6 +265,9 @@ function renderApts() {
 function renderApt(a) {
   const contract = hasContract(a)
     ? `<div class="row"><span class="k">Договор от</span><span class="v">${fmtDate(a.contractDate)}</span></div>
+       <div class="row"><span class="k">Действует до</span><span class="v">${a.contractEnd
+         ? `${fmtDate(a.contractEnd)}<div class="small ${endsSoon(a) ? 'amount bad' : ''}">${leftText(daysLeft(a.contractEnd))}</div>`
+         : '<span class="amount bad">не указано</span>'}</span></div>
        <div class="row"><span class="k">Скан договора</span><a class="btn" href="${esc(a.contractUrl)}" onclick="openLink(event, this.href)">Открыть</a></div>`
     : `<div class="warnbox">⚠️ ${!a.contractDate && !a.contractUrl ? 'Нет даты и ссылки на договор' : (!a.contractDate ? 'Нет даты договора' : 'Нет ссылки на договор')}. Заполните столбцы «Дата договора» и «Ссылка на договор» в листе «Условия аренды».</div>`;
   const invoices = a.history.map(r => {
