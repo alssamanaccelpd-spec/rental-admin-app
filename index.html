@@ -212,7 +212,7 @@ function renderStats() {
       <div class="note">${apts.length - busy ? (apts.length - busy) + ' свободно' : 'все заняты'}</div></div>
     <div class="stat ${kuDone < kuNeed.length ? 'alert' : ''}"><div class="label">КУ внесены за ${monthShort(DATA.today).toLowerCase()}</div>
       <div class="value">${kuDone} из ${kuNeed.length}</div>
-      <div class="note">квартиры, где КУ вносит Маша</div></div>
+      <div class="note">квартиры, где КУ вносится вручную</div></div>
   </div>`;
 }
 
@@ -304,8 +304,8 @@ function renderApt(a) {
       <div class="row"><span class="k">Оплата</span><span class="v">${esc(a.payMethod)}</span></div>
       <div class="row"><span class="k">Заезд</span><span class="v">${fmtDate(a.moveIn) || '—'}</span></div>
       ${a.manualKu ? `<div class="row"><span class="k">КУ за ${monthShort(DATA.today).toLowerCase()}</span><span class="v">${a.kuMonth === null
-        ? '<span class="amount bad">ещё не внесена</span><div class="small">Маша вносит до 28-го, сумма войдёт в счёт в конце месяца</div>'
-        : money(a.kuMonth) + '<div class="small">внесена Машей, войдёт в счёт в конце месяца</div>'}</span></div>` : ''}
+        ? '<span class="amount bad">ещё не внесена</span><div class="small">Вносится до 28-го, сумма войдёт в счёт в конце месяца</div>'
+        : money(a.kuMonth) + '<div class="small">внесена, войдёт в счёт в конце месяца</div>'}</span></div>` : ''}
     </div>
 
     <div class="section-title">Бот</div>
