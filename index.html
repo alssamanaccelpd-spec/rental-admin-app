@@ -53,6 +53,7 @@
   .stat .note { color: var(--muted); font-size: 12px; margin-top: 2px; }
   .stat.alert .value { color: var(--bad); }
   .stat.good .value { color: var(--ok); }
+  .stat.wide { grid-column: span 2; }
 
   /* Переключатель */
   .seg { display: flex; background: var(--idle-bg); border-radius: 11px; padding: 3px; margin-bottom: 12px; }
@@ -200,6 +201,10 @@ function renderStats() {
   const busy = apts.filter(occupied).length;
   const kuNeed = apts.filter(a => occupied(a) && a.manualKu);
   const kuDone = kuNeed.filter(a => a.kuMonth !== null).length;
+  const tenants = apts.filter(occupied);
+  const inBotCount = tenants.filter(inBot).length;
+  const tgCount = tenants.filter(a => a.inTg).length;
+  const maxCount = tenants.filter(a => a.inMax).length;
   return `<div class="stats">
     <div class="stat ${debt > 0 ? 'alert' : 'good'}"><div class="label">Ждём оплату</div>
       <div class="value">${debt > 0 ? money(debt) : 'Долгов нет'}</div>
@@ -213,6 +218,9 @@ function renderStats() {
     <div class="stat ${kuDone < kuNeed.length ? 'alert' : ''}"><div class="label">КУ внесены за ${monthShort(DATA.today).toLowerCase()}</div>
       <div class="value">${kuDone} из ${kuNeed.length}</div>
       <div class="note">квартиры, где КУ вносится вручную</div></div>
+    <div class="stat wide ${inBotCount < tenants.length ? 'alert' : 'good'}"><div class="label">Арендаторы в боте</div>
+      <div class="value">${inBotCount} из ${tenants.length}</div>
+      <div class="note">Telegram ${tgCount} · MAX ${maxCount}${tenants.length - inBotCount ? ' · не подключены: ' + (tenants.length - inBotCount) : ''}</div></div>
   </div>`;
 }
 
