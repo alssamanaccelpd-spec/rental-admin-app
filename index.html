@@ -198,7 +198,8 @@ function renderStats() {
   const apts = DATA.apartments;
   const debt = apts.reduce((s, a) => s + a.dueNow, 0);
   const debtors = apts.filter(a => a.dueNow > 0).length;
-  const cur = DATA.months.find(m => m.month === DATA.today);
+  // До 20-го — итоги прошлого месяца (его счета оплачивают в начале этого).
+  const cur = DATA.months.find(m => m.month === kuPeriod());
   const busy = apts.filter(occupied).length;
   const kuNeed = apts.filter(a => occupied(a) && a.manualKu);
   const kuDone = kuNeed.filter(a => a.kuMonth !== null).length;
@@ -210,7 +211,7 @@ function renderStats() {
     <div class="stat ${debt > 0 ? 'alert' : 'good'}"><div class="label">Ждём оплату</div>
       <div class="value">${debt > 0 ? money(debt) : 'Долгов нет'}</div>
       <div class="note">${debtors ? debtors + ' ' + plural(debtors, 'квартира', 'квартиры', 'квартир') : 'всё оплачено'}</div></div>
-    <div class="stat good"><div class="label">Получено за ${monthShort(DATA.today).toLowerCase()}</div>
+    <div class="stat good"><div class="label">Получено за ${monthShort(kuPeriod()).toLowerCase()}</div>
       <div class="value">${money(cur ? cur.total : 0)}</div>
       <div class="note">${cur ? 'оплачено ' + cur.paid + ' из ' + (cur.paid + cur.unpaid) : 'счетов ещё нет'}</div></div>
     <div class="stat"><div class="label">Сдано</div>
