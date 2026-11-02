@@ -153,6 +153,7 @@ let view = {tab: 'apts', filter: 'all', apt: null, openMonth: null};
 const occupied = a => !!a.tenant;
 const unitNo = a => (a.unit.match(/\d+/) || [a.id.split('-').pop()])[0];
 const hasContract = a => !!(a.contractDate && a.contractUrl);
+const kuPeriod = () => DATA.kuPeriod || DATA.today;
 const kuMissing = a => occupied(a) && a.manualKu && a.kuMonth === null;
 const inBot = a => a.inTg || a.inMax;
 const SOON_DAYS = 60;
@@ -215,7 +216,7 @@ function renderStats() {
     <div class="stat"><div class="label">Сдано</div>
       <div class="value">${busy} из ${apts.length}</div>
       <div class="note">${apts.length - busy ? (apts.length - busy) + ' свободно' : 'все заняты'}</div></div>
-    <div class="stat ${kuDone < kuNeed.length ? 'alert' : ''}"><div class="label">КУ внесены за ${monthShort(DATA.today).toLowerCase()}</div>
+    <div class="stat ${kuDone < kuNeed.length ? 'alert' : ''}"><div class="label">КУ внесены за ${monthShort(kuPeriod()).toLowerCase()}</div>
       <div class="value">${kuDone} из ${kuNeed.length}</div>
       <div class="note">квартиры, где КУ вносится вручную</div></div>
     <div class="stat wide ${inBotCount < tenants.length ? 'alert' : 'good'}"><div class="label">Арендаторы в боте</div>
@@ -311,9 +312,9 @@ function renderApt(a) {
       ${a.extra ? `<div class="row"><span class="k">${esc(a.extraLabel || 'Доп. услуга')}</span><span class="v">${money(a.extra)}<div class="small">фиксированно, в каждом счёте</div></span></div>` : ''}
       <div class="row"><span class="k">Оплата</span><span class="v">${esc(a.payMethod)}</span></div>
       <div class="row"><span class="k">Заезд</span><span class="v">${fmtDate(a.moveIn) || '—'}</span></div>
-      ${a.manualKu ? `<div class="row"><span class="k">КУ за ${monthShort(DATA.today).toLowerCase()}</span><span class="v">${a.kuMonth === null
+      ${a.manualKu ? `<div class="row"><span class="k">КУ за ${monthShort(kuPeriod()).toLowerCase()}</span><span class="v">${a.kuMonth === null
         ? '<span class="amount bad">ещё не внесена</span><div class="small">Вносится до 28-го, сумма войдёт в счёт в конце месяца</div>'
-        : money(a.kuMonth) + '<div class="small">внесена, войдёт в счёт в конце месяца</div>'}</span></div>` : ''}
+        : money(a.kuMonth) + '<div class="small">' + (kuPeriod() === DATA.today ? 'внесена, войдёт в счёт в конце месяца' : 'вошла в счёт за ' + monthShort(kuPeriod()).toLowerCase() + '; за ' + monthShort(DATA.today).toLowerCase() + ' вносится с 20-го') + '</div>'}</span></div>` : ''}
     </div>
 
     <div class="section-title">Бот</div>
